@@ -4,6 +4,8 @@ from django.shortcuts import render
 import chromadb
 from django.conf import settings
 from rest_framework.response import Response
+import dill
+from chromadb.config import Settings as chroma_settings
 
 
 
@@ -17,17 +19,43 @@ from sentence_transformers import SentenceTransformer
 @api_view(['GET'])
 def ApiDetail(request, question):
     if question:
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        question_embedding = model.encode([question])
-        client = chromadb.Client()
-        # get collection
-        collection = client.get_collection('api_docs')
+        client = chromadb.PersistentClient(path='chroma_db/')
+
+        collection = client.get_or_create_collection(name="test")
         results = collection.query(
-            embeddings=question_embedding,
+            query_texts=[question],
             n_results=1
         )
-        relevant_doc = results['metadatas'][0]['document']
+    desc = results["documents"][0]
+    # ['\n         Description**: to get all items in todo.\n         Path: todo/\n         Method: GET\n         Parameters:\n         \n         ']
+
+    import re
+    path = re.search('Path: (.*)', str(desc))
+    # break by newline
+    pattern = r"^(.*?)\\n"
+
+    # Applying the regex
+    path = re.search(pattern, str(path))
+
+    # Extracting the matched part (if exists)
+    if path:
+        path = path.group(1)
+        path = path.match.replace(' ', '')
+        path = path.strip()
+        path = path[4:]
+
+
+    method = re.search('Method: (.*)', str(desc))
+    # Applying the regex
+    method = re.search(pattern, str(method))
+
+    # Extracting the matched part (if exists)
+    if method:
+        method = method.group(1)
+        method = method.match.replace(' ', '')
+        method = method.strip()
+        method = method[7:]
     return Response({
         'question': question,
-        'answer': relevant_doc
+        'answer': results["documents"][0]
     })

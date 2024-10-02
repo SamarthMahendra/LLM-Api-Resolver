@@ -1,5 +1,6 @@
 from django.db import models
 import chromadb
+import dill
 from chromadb.config import Settings as chroma_settings
 # import django Settings
 from django.conf import settings
@@ -62,25 +63,16 @@ class Api(models.Model):
 
         api_documents = [data]
 
-        client = chromadb.Client()
-        collection = client.create_collection(name='api_docs')
+        client = chromadb.PersistentClient(path='chroma_db/')
+
+        collection = client.get_or_create_collection(name="test")
 
         for doc_id, data in enumerate(api_documents):
             collection.add(
                 documents=[data],
                 ids=[str(doc_id)]
             )
-        print('Api saved to chromaDB')
-        question = "show list of todos"
-        client = chromadb.Client()
-        # get collection
-        collection = client.get_collection('api_docs')
-        results = collection.query(
-            query_texts = [question],
-            n_results=1
-        )
-        relevant_doc = str(results)
-        print(relevant_doc)
+        return
 
 
 
